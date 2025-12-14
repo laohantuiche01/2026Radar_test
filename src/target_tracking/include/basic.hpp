@@ -6,6 +6,7 @@
 
 #include "eigen3/Eigen/Eigen"
 #include "Yolo.hpp"
+#include "Deepsort/Deepsort.hpp"
 
 namespace DeepSort {
     // 全局配置
@@ -37,27 +38,14 @@ namespace DeepSort {
         Eigen::VectorXf feature; // 重识别特征
         std::shared_ptr<BBox> father; //指向全车的结构体
         int armor_number; // 装甲板数字（对应TrackeID）
-
-        static std::vector<ArmorBBox> from_yolo_to_armorbbox(const std::vector<Yolo_Type::Detection> detections) {
-            std::vector<ArmorBBox> armor_bboxs;
-            for (auto detection: detections) {
-                ArmorBBox armor_bbox;
-                armor_bbox.x1 = static_cast<float>(detection.box.x);
-                armor_bbox.y1 = static_cast<float>(detection.box.y);
-                armor_bbox.x2 = static_cast<float>(detection.box.x + detection.box.width);
-                armor_bbox.y2 = static_cast<float>(detection.box.y + detection.box.height);
-                armor_bbox.score = detection.confidence;
-                armor_bbox.armor_number = detection.class_id;
-                armor_bbox.feature = Eigen::VectorXf::Zero(DeepSort::FEATURE_DIM);
-                armor_bboxs.push_back(armor_bbox);
-            }
-            return armor_bboxs;
-        }
     };
 
     // 边界框结构体(这个是全车追踪的)
     struct BBox {
         BBox() = default;
+
+        BBox(float x, float y, float x1, float x2, float confidence, Eigen::VectorXf matrix, const ArmorBBox & armor_b_box,
+             int id, TrackeID tracke_id);
 
         float x1, y1, x2, y2; // 左上角/右下角坐标
         float score; // 检测置信度

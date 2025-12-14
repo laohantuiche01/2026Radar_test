@@ -31,6 +31,22 @@ namespace DeepSort {
             return armor_bboxes;
         }
 
+        static std::vector<BBox> convert_bbox_detections(
+            const std::vector<BBox> &raw_vehicle_detections) {
+            std::vector<BBox> armor_bboxes;
+            for (const auto &det: raw_vehicle_detections) {
+                BBox vehicle_bbox;
+                vehicle_bbox.x1 = det.x1;
+                vehicle_bbox.y1 = det.y1;
+                vehicle_bbox.x2 = det.x2;
+                vehicle_bbox.y2 = det.y2;
+                vehicle_bbox.score = det.score;
+                vehicle_bbox.feature = det.feature;
+                armor_bboxes.push_back(vehicle_bbox);
+            }
+            return armor_bboxes;
+        }
+
         // 计算余弦距离（特征匹配）
         static float cosine_distance(const Eigen::VectorXf &feat1, const Eigen::VectorXf &feat2) {
             if (feat1.size() != feat2.size() || feat1.size() == 0) {
@@ -43,120 +59,17 @@ namespace DeepSort {
         }
     };
 
-    // 移动目标检测器
-    class MotionDetector {
-    private:
-        cv::Ptr<cv::BackgroundSubtractor> bg_subtractor_;
-        int morph_kernel_size_ = 5; // 形态学操作核大小
-        float min_contour_area_ = 500.0f; // 最小轮廓面积阈值
-        bool use_gmm_ = true; // true:GMM, false:KNN
 
-        // 形态学处理（去噪）
-        void morph_process(cv::Mat &fg_mask) {
-            cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE,
-                                                       cv::Size(morph_kernel_size_, morph_kernel_size_));
-
-            cv::morphologyEx(fg_mask, fg_mask, cv::MORPH_OPEN, kernel);
-            cv::morphologyEx(fg_mask, fg_mask, cv::MORPH_CLOSE, kernel);
-            cv::dilate(fg_mask, fg_mask, kernel);
-        }
-
-    public:
-        // 构造函数
-        MotionDetector(bool use_gmm = true, float learning_rate = 0.01f) : use_gmm_(use_gmm) {
-            if (use_gmm_) {
-                // GMM背景建模（默认）
-                bg_subtractor_ = cv::createBackgroundSubtractorMOG2(
-                    500, // 历史帧数
-                    16, // 方差阈值
-                    true // 是否检测阴影
-                );
-            } else {
-                // KNN背景建模
-                bg_subtractor_ = cv::createBackgroundSubtractorKNN(
-                    500, // 历史帧数
-                    400, // 距离阈值
-                    false // 是否检测阴影
-                );
-            }
-            //bg_subtractor_->
-            //bg_subtractor_->setDetectShadows(false); // 关闭阴影检测
-        }
-
-        void set_params(float min_contour_area, int morph_kernel_size) {
-            min_contour_area_ = min_contour_area;
-            morph_kernel_size_ = morph_kernel_size;
-        }
-
-        std::vector<BBox> detect_vehicles(const cv::Mat &frame) {
-            std::vector<BBox> vehicle_bboxes;
-            cv::Mat fg_mask, gray_frame;
-
-            //预处理：转灰度图+高斯模糊
-            cv::cvtColor(frame, gray_frame, cv::COLOR_BGR2GRAY);
-            cv::GaussianBlur(gray_frame, gray_frame, cv::Size(3, 3), 0);
-
-            //背景减除
-            bg_subtractor_->apply(gray_frame, fg_mask, 0.01);
-
-            //形态学处理
-            morph_process(fg_mask);
-
-            //提取轮廓
-            std::vector<std::vector<cv::Point> > contours;
-            std::vector<cv::Vec4i> hierarchy;
-            cv::findContours(fg_mask, contours, hierarchy,
-                             cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-            //筛选有效轮廓并转换为BBox
-            for (const auto &contour: contours) {
-                double area = cv::contourArea(contour);
-                if (area < min_contour_area_) continue;
-
-                // 计算边界框
-                cv::Rect rect = cv::boundingRect(contour);
-
-                // 过滤过小/过大的框
-                if (rect.width < 20 || rect.height < 20 ||
-                    rect.width > frame.cols / 2 || rect.height > frame.rows / 2) {
-                    continue;
-                }
-
-                // 转换为BBox结构（全车）
-                BBox bbox;
-                bbox.x1 = static_cast<float>(rect.x);
-                bbox.y1 = static_cast<float>(rect.y);
-                bbox.x2 = static_cast<float>(rect.x + rect.width);
-                bbox.y2 = static_cast<float>(rect.y + rect.height);
-                bbox.score = static_cast<float>(area) / static_cast<float>(rect.width * rect.height); // 填充率作为置信度
-                bbox.feature = Eigen::VectorXf::Zero(FEATURE_DIM); // 初始化特征向量
-
-                vehicle_bboxes.push_back(bbox);
-            }
-
-            return vehicle_bboxes;
-        }
-
-        // 获取前景掩码
-        cv::Mat get_foreground_mask(const cv::Mat &frame) {
-            cv::Mat fg_mask, gray_frame;
-            cv::cvtColor(frame, gray_frame, cv::COLOR_BGR2GRAY);
-            bg_subtractor_->apply(gray_frame, fg_mask, 0.01);
-            morph_process(fg_mask);
-            return fg_mask;
-        }
-
-        // 重置背景模型
-        void reset() {
-            bg_subtractor_->clear();
-        }
-    };
-
-    // 装甲板与车辆匹配核心类
     class ArmorMatch {
     private:
         DeepSortData &data_manager_;
-        MotionDetector motion_detector_; // 移动目标检测器
+
+    public:
+        //构造函数
+        ArmorMatch(bool use_gmm = true, float min_contour_area = 500.0f)
+            : data_manager_(DeepSortData::get_instance()) {
+        }
+
 
         //计算两个BBox的中心距离
         static float calculate_center_distance(const ArmorBBox &armor_bbox, const BBox &vehicle_bbox) {
@@ -179,7 +92,7 @@ namespace DeepSort {
             return inter_area / (area1 + area2 - inter_area + 1e-6f);
         }
 
-        // 匹配装甲板到车辆（GMM/KNN检测）
+        // 匹配装甲板到车辆
         static std::map<int, int> match_armor_to_vehicle(
             const std::vector<ArmorBBox> &armor_bboxes,
             const std::vector<BBox> &vehicle_bboxes) {
@@ -224,6 +137,8 @@ namespace DeepSort {
             return armor_vehicle_map;
         }
 
+
+
         // 检查装甲板是否在车辆范围内
         static bool is_armor_in_vehicle(const ArmorBBox &armor_bbox, const BBox &vehicle_bbox) {
             const float expand_ratio = 1.2f; // 车辆边界框扩展比例
@@ -243,17 +158,11 @@ namespace DeepSort {
                     armor_bbox.y2 <= expanded_vehicle.y2);
         }
 
-    public:
-        //构造函数
-        ArmorMatch(bool use_gmm = true, float min_contour_area = 500.0f)
-            : data_manager_(DeepSortData::get_instance()),
-              motion_detector_(use_gmm) {
-            motion_detector_.set_params(min_contour_area, 5);
-        }
-
         // 核心匹配函数
-        void Match(const std::vector<ArmorBBox> &armor_detect_result, const cv::Mat &frame) {
-            std::vector<BBox> vehicle_bboxes = motion_detector_.detect_vehicles(frame);
+        void Match(const std::vector<ArmorBBox> &armor_detect_result, const std::vector<BBox> &vehicle_detect_result,
+                   const cv::Mat &frame) {
+            //数据类型转换
+            std::vector<BBox> vehicle_bboxes = Interface_::convert_bbox_detections(vehicle_detect_result);
             std::vector<ArmorBBox> armor_bboxes = Interface_::convert_armor_detections(armor_detect_result);
             data_manager_.predict_all_trackers();
             auto armor_vehicle_map = match_armor_to_vehicle(armor_bboxes, vehicle_bboxes);
@@ -402,11 +311,7 @@ namespace DeepSort {
                             0.5, cv::Scalar(0, 255, 255), 2);
             }
 
-            cv::Mat fg_mask = motion_detector_.get_foreground_mask(frame);
-            cv::cvtColor(fg_mask, fg_mask, cv::COLOR_GRAY2BGR);
-
             cv::imshow("Result", vis_image);
-            cv::imshow("Foreground Mask",fg_mask);
             cv::waitKey(1);
         }
 
@@ -432,16 +337,6 @@ namespace DeepSort {
             }
 
             return result;
-        }
-
-        // 重置背景模型（场景变化时调用）
-        void reset_background_model() {
-            motion_detector_.reset();
-        }
-
-        // 设置移动检测参数
-        void set_motion_detector_params(float min_contour_area, int morph_kernel_size) {
-            motion_detector_.set_params(min_contour_area, morph_kernel_size);
         }
     };
 }

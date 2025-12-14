@@ -16,7 +16,7 @@ namespace DeepSort {
         int hits_ = 0; // 连续匹配帧数
         int age_ = 0; // 跟踪器存活帧数
 
-        // 全车边界框（GMM/KNN检测）
+        // 全车边界框
         std::shared_ptr<BBox> vehicle_bbox_;
 
     public:
@@ -39,6 +39,12 @@ namespace DeepSort {
             if (hits_ >= N_INIT) {
                 state_ = CONFIRMED;
             }
+        }
+
+        //只跟踪车辆,未识别到装甲板
+        void init(const BBox &vehicle_bbox) {
+            kf_.init(vehicle_bbox);
+
         }
 
         // 预测下一帧位置
