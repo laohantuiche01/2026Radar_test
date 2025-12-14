@@ -14,7 +14,7 @@ namespace DeepSort {
     const int MAX_AGE = 30; // 最大未匹配帧数
     const int N_INIT = 3; // 初始匹配帧数
     const int FEATURE_DIM = 128; // 重识别特征维度
-    const float IOU_THRESHOLD = 0.3; // IOU匹配阈值
+    const float IOU_THRESHOLD = 0.003; // IOU匹配阈值
 
     enum TrackeID {
         RED_1 = 1, //红方英雄
@@ -33,19 +33,41 @@ namespace DeepSort {
 
     // 装甲板结构体
     struct ArmorBBox {
+        ArmorBBox() {
+        }
+
+        ArmorBBox(float x, float y, float x1_, float y1_, float confidence, Eigen::VectorXf matrix,
+                  int id, TrackeID tracke_id) {
+            x1 = x;
+            y1 = y;
+            x2 = x1_;
+            y2 = y1_;
+            score = confidence;
+            feature = matrix;
+            armor_number = id;
+        }
+
         float x1, y1, x2, y2; // 左上角/右下角坐标
         float score; // 检测置信度
         Eigen::VectorXf feature; // 重识别特征
-        std::shared_ptr<BBox> father; //指向全车的结构体
+        //std::shared_ptr<BBox> father; //指向全车的结构体
         int armor_number; // 装甲板数字（对应TrackeID）
     };
 
     // 边界框结构体(这个是全车追踪的)
     struct BBox {
-        BBox() = default;
+        BBox() : armor_bbox() {
+        } ;
 
-        BBox(float x, float y, float x1, float x2, float confidence, Eigen::VectorXf matrix, const ArmorBBox & armor_b_box,
-             int id, TrackeID tracke_id);
+        BBox(float x, float y, float x1_, float y1_, float confidence, Eigen::VectorXf matrix,
+             int id, TrackeID tracke_id) {
+            x1 = x;
+            y1 = y;
+            x2 = x1_;
+            y2 = y1_;
+            score = confidence;
+            feature = matrix;
+        }
 
         float x1, y1, x2, y2; // 左上角/右下角坐标
         float score; // 检测置信度

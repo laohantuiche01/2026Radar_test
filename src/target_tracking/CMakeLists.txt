@@ -21,6 +21,8 @@ ament_auto_find_build_dependencies()
 # 增加测试文件
 ament_auto_add_executable(model_debug
         test/image_receive.cpp
+        include/Deepsort/DeepsortHelper.cpp
+        include/Deepsort/Deepsort.cpp
 )
 ament_target_dependencies(model_debug
         rclcpp
@@ -30,6 +32,7 @@ ament_target_dependencies(model_debug
         cv_bridge
 )
 include_directories(model_debug
+        include/basic.hpp
         ${EIGEN3_INCLUDE_DIR}
 )
 target_link_libraries(model_debug
