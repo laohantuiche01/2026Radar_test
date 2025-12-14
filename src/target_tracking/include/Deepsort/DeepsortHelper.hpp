@@ -18,8 +18,6 @@ namespace DeepSort {
         static std::vector<BBox> convert_bbox_detections(
             const std::vector<Yolo_Type::Detection> &raw_vehicle_detections);
 
-        // 计算余弦距离（特征匹配）
-        //static float cosine_distance(const Eigen::VectorXf &feat1, const Eigen::VectorXf &feat2);
     };
 
     class ArmorMatch {

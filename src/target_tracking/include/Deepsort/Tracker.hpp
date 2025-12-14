@@ -89,8 +89,8 @@ namespace DeepSort {
         void update(const ArmorBBox& armor_bbox, const BBox& vehicle_bbox) {
             if (state_ == DELETED) return;
 
-            // 更新卡尔曼滤波（优先用装甲板精确位置）
-            kf_.update(armor_bbox);
+            // 更新卡尔曼滤波
+            kf_.update(vehicle_bbox);
             *vehicle_bbox_ = vehicle_bbox;
             last_known_vehicle_box_ = cv::Rect2f(vehicle_bbox.x1, vehicle_bbox.y1,
                                                 vehicle_bbox.x2 - vehicle_bbox.x1,

@@ -10,7 +10,6 @@ std::vector<DeepSort::ArmorBBox> DeepSort::Interface_::convert_armor_detections(
             static_cast<float>(det.box.x + det.box.width),
             static_cast<float>(det.box.y + det.box.height),
             det.confidence,
-            Eigen::VectorXf(), // 假设特征后续会填充
             -1,
             static_cast<TrackeID>(-1)
         });
@@ -28,23 +27,12 @@ std::vector<DeepSort::BBox> DeepSort::Interface_::convert_bbox_detections(
             static_cast<float>(det.box.x + det.box.width),
             static_cast<float>(det.box.y + det.box.height),
             det.confidence,
-            Eigen::VectorXf(),
             -1,
             static_cast<TrackeID>(-1)
         });
     }
     return result;
 }
-//
-// float DeepSort::Interface_::cosine_distance(const Eigen::VectorXf &feat1, const Eigen::VectorXf &feat2) {
-//     if (feat1.size() != feat2.size() || feat1.size() == 0) {
-//         return 1.0f; // 最大距离
-//     }
-//     float dot = feat1.dot(feat2);
-//     float norm1 = feat1.norm();
-//     float norm2 = feat2.norm();
-//     return 1.0f - (dot / (norm1 * norm2 + 1e-6f));
-// }
 
 //===========================================================================================================================
 

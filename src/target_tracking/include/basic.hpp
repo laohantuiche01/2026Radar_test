@@ -34,44 +34,57 @@ namespace DeepSort {
     // 装甲板结构体
     struct ArmorBBox {
         ArmorBBox() {
+            x1 = 0;
+            y1 = 0;
+            x2 = 0;
+            y2 = 0;
+            score = 0;
+            id = -1;
+            armor_number = -1;
         }
 
-        ArmorBBox(float x, float y, float x1_, float y1_, float confidence, Eigen::VectorXf matrix,
-                  int id, TrackeID tracke_id) {
+        ArmorBBox(float x, float y, float x1_, float y1_, float confidence,
+                  int id_, TrackeID tracke_id) {
             x1 = x;
             y1 = y;
             x2 = x1_;
             y2 = y1_;
             score = confidence;
-            feature = matrix;
-            armor_number = id;
+            id = id_;
+            armor_number = tracke_id;
         }
 
         float x1, y1, x2, y2; // 左上角/右下角坐标
         float score; // 检测置信度
-        Eigen::VectorXf feature; // 重识别特征
-        //std::shared_ptr<BBox> father; //指向全车的结构体
+        int id;
         int armor_number; // 装甲板数字（对应TrackeID）
     };
 
     // 边界框结构体(这个是全车追踪的)
     struct BBox {
         BBox() : armor_bbox() {
+            x1 = 0;
+            y1 = 0;
+            x2 = 0;
+            y2 = 0;
+            score = 0;
+            vehicle_id = static_cast<TrackeID>(-1);
+            track_id = -1;
         } ;
 
-        BBox(float x, float y, float x1_, float y1_, float confidence, Eigen::VectorXf matrix,
-             int id, TrackeID tracke_id) {
+        BBox(float x, float y, float x1_, float y1_, float confidence,
+             int id_, TrackeID tracke_id_) {
             x1 = x;
             y1 = y;
             x2 = x1_;
             y2 = y1_;
             score = confidence;
-            feature = matrix;
+            vehicle_id = tracke_id_;
+            track_id = id_;
         }
 
         float x1, y1, x2, y2; // 左上角/右下角坐标
         float score; // 检测置信度
-        Eigen::VectorXf feature; // 重识别特征
         ArmorBBox armor_bbox; //所包含的装甲板
         int track_id = -1; // 跟踪ID
         TrackeID vehicle_id = static_cast<TrackeID>(-1); // 车辆类型ID（红/蓝方）

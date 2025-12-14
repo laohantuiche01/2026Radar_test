@@ -77,8 +77,9 @@ namespace DeepSort {
         Eigen::MatrixXf cost(n, m);
         for (int i = 0; i < n; ++i) {
             for (int j = 0; j < m; ++j) {
-                float cos_dist = cosine_distance(active_trackers[i]->get_vehicle_bbox()->feature,
-                                                 detections[j].feature);
+                // float cos_dist = cosine_distance(active_trackers[i]->get_vehicle_bbox()->feature,
+                //                                  detections[j].feature);
+                float cos_dist = 1.0f;
                 float iou_dist = 1.0f - iou(*active_trackers[i]->get_vehicle_bbox(), detections[j]);
                 cost(i, j) = 0.7f * cos_dist + 0.3f * iou_dist;
             }
@@ -148,7 +149,6 @@ namespace DeepSort {
                 static_cast<float>(vehicle_rect.x + vehicle_rect.width),
                 static_cast<float>(vehicle_rect.y + vehicle_rect.height),
                 vehicle->confidence,
-                Eigen::VectorXf(),
                 vehicle->id,
                 vehicle->vehicle_id
             };
@@ -226,12 +226,12 @@ namespace DeepSort {
 #include "Deepsort.hpp"
 
 namespace DeepSort {
-    DeepSortControl::DeepSortControl() {}
+    DeepSortControl::DeepSortControl() = default;
 
     std::vector<OutputDetection> DeepSortControl::track(
-        const std::vector<Yolo_Type::Detection>& armor_detections,
-        const std::vector<Yolo_Type::Detection>& vehicle_detections) {
-        vehicle_bbox_=Interface_::convert_bbox_detections(vehicle_detections);
+        const std::vector<Yolo_Type::Detection> &armor_detections,
+        const std::vector<Yolo_Type::Detection> &vehicle_detections) {
+        vehicle_bbox_ = Interface_::convert_bbox_detections(vehicle_detections);
         armor_bbox_ = Interface_::convert_armor_detections(armor_detections);
         return deepsort_.track(vehicle_bbox_, armor_bbox_);
     }
