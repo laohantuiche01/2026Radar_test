@@ -16,7 +16,7 @@ namespace DeepSort {
         float confidence; // 置信度
         cv::Rect box; // 边界框
         int armor_number; // 装甲板数字(-1表示未知)
-        TrackeID vehicle_id; // 车辆类型ID
+        TrackID vehicle_id; // 车辆类型ID
     };
 
     // 核心算法类：专注于车辆追踪

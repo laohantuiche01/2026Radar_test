@@ -16,7 +16,7 @@ namespace DeepSort {
     const int FEATURE_DIM = 128; // 重识别特征维度
     const float IOU_THRESHOLD = 0.003; // IOU匹配阈值
 
-    enum TrackeID {
+    enum TrackID {
         RED_1 = 1, //红方英雄
         RED_2 = 2, //红方工程
         RED_3 = 3, //红方3号步兵
@@ -44,7 +44,7 @@ namespace DeepSort {
         }
 
         ArmorBBox(float x, float y, float x1_, float y1_, float confidence,
-                  int id_, TrackeID tracke_id) {
+                  int id_, TrackID tracke_id) {
             x1 = x;
             y1 = y;
             x2 = x1_;
@@ -68,12 +68,12 @@ namespace DeepSort {
             x2 = 0;
             y2 = 0;
             score = 0;
-            vehicle_id = static_cast<TrackeID>(-1);
+            vehicle_id = static_cast<TrackID>(-1);
             track_id = -1;
         } ;
 
         BBox(float x, float y, float x1_, float y1_, float confidence,
-             int id_, TrackeID tracke_id_) {
+             int id_, TrackID tracke_id_) {
             x1 = x;
             y1 = y;
             x2 = x1_;
@@ -87,7 +87,7 @@ namespace DeepSort {
         float score; // 检测置信度
         ArmorBBox armor_bbox; //所包含的装甲板
         int track_id = -1; // 跟踪ID
-        TrackeID vehicle_id = static_cast<TrackeID>(-1); // 车辆类型ID（红/蓝方）
+        TrackID vehicle_id = static_cast<TrackID>(-1); // 车辆类型ID（红/蓝方）
     };
 
     // 跟踪器状态

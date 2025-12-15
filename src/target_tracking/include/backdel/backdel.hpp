@@ -15,7 +15,7 @@ namespace DeepSort {
     class DeepSortData {
     private:
         std::map<int, std::shared_ptr<Tracker>> trackers_; // track_id -> Tracker
-        std::map<TrackeID, int> vehicle_armor_map_;        // 车辆类型ID -> 装甲板数字
+        std::map<TrackID, int> vehicle_armor_map_;        // 车辆类型ID -> 装甲板数字
         int next_track_id_ = 0;
         std::mutex mutex_;
 
@@ -36,11 +36,11 @@ namespace DeepSort {
         // 创建新跟踪器
         int create_tracker(const ArmorBBox& armor_bbox, const BBox& vehicle_bbox, int armor_number) {
             std::lock_guard<std::mutex> lock(mutex_);
-            int track_id = next_track_id_++;
-            auto tracker = std::make_shared<Tracker>(track_id);
+            int track_id = next_track_id_++; //这个id是查询用的id,不是车辆的id
+            auto tracker = std::make_shared<Tracker>(track_id); //这里创建的跟踪器
             tracker->init(armor_bbox, vehicle_bbox, armor_number);
             trackers_[track_id] = tracker;
-            vehicle_armor_map_[static_cast<TrackeID>(armor_number)] = armor_number;
+            vehicle_armor_map_[static_cast<TrackID>(armor_number)] = armor_number;
             return track_id;
         }
 
@@ -72,7 +72,7 @@ namespace DeepSort {
                 trackers_[track_id]->update(armor_bbox, vehicle_bbox);
                 // 更新车辆-装甲板映射
                 if (armor_bbox.armor_number != -1) {
-                    vehicle_armor_map_[static_cast<TrackeID>(armor_bbox.armor_number)] = armor_bbox.armor_number;
+                    vehicle_armor_map_[static_cast<TrackID>(armor_bbox.armor_number)] = armor_bbox.armor_number;
                 }
             }
         }
@@ -94,7 +94,7 @@ namespace DeepSort {
         }
 
         // 获取车辆对应的装甲板数字
-        int get_armor_number(TrackeID vehicle_id) {
+        int get_armor_number(TrackID vehicle_id) {
             std::lock_guard<std::mutex> lock(mutex_);
             if (vehicle_armor_map_.count(vehicle_id)) {
                 return vehicle_armor_map_[vehicle_id];
@@ -117,7 +117,7 @@ namespace DeepSort {
             for (auto it = trackers_.begin(); it != trackers_.end();) {
                 if (it->second->get_state() == DELETED) {
                     // 移除车辆-装甲板映射
-                    TrackeID vid = it->second->get_vehicle_id();
+                    TrackID vid = it->second->get_vehicle_id();
                     vehicle_armor_map_.erase(vid);
                     it = trackers_.erase(it);
                 } else {

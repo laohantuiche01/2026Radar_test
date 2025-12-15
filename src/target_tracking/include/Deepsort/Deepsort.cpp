@@ -131,7 +131,7 @@ namespace DeepSort {
         // 筛选出未知ID的车辆跟踪结果
         std::vector<OutputDetection *> unknown_vehicles;
         for (auto &res: track_results) {
-            if (res.vehicle_id == static_cast<TrackeID>(-1) || res.armor_number == -1) {
+            if (res.vehicle_id == static_cast<TrackID>(-1) || res.armor_number == -1) {
                 unknown_vehicles.push_back(&res);
             }
         }
@@ -170,7 +170,7 @@ namespace DeepSort {
             // 更新车辆ID信息
             if (best_armor_idx != -1) {
                 vehicle->armor_number = armor_detections[best_armor_idx].armor_number;
-                vehicle->vehicle_id = static_cast<TrackeID>(vehicle->armor_number);
+                vehicle->vehicle_id = static_cast<TrackID>(vehicle->armor_number);
                 auto tracker = data_manager_.get_tracker(vehicle->id);
                 if (tracker) {
                     tracker->update(armor_detections[best_armor_idx], vehicle_bbox);

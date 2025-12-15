@@ -11,7 +11,7 @@ std::vector<DeepSort::ArmorBBox> DeepSort::Interface_::convert_armor_detections(
             static_cast<float>(det.box.y + det.box.height),
             det.confidence,
             -1,
-            static_cast<TrackeID>(-1)
+            static_cast<TrackID>(-1)
         });
     }
     return result;
@@ -28,7 +28,7 @@ std::vector<DeepSort::BBox> DeepSort::Interface_::convert_bbox_detections(
             static_cast<float>(det.box.y + det.box.height),
             det.confidence,
             -1,
-            static_cast<TrackeID>(-1)
+            static_cast<TrackID>(-1)
         });
     }
     return result;
@@ -208,7 +208,7 @@ void DeepSort::ArmorMatch::visualize_matching(const cv::Mat &frame, const std::v
         if (a_bbox.armor_number != -1) {
             std::string num_str = std::to_string(a_bbox.armor_number);
             std::string type_str;
-            switch (static_cast<TrackeID>(a_bbox.armor_number)) {
+            switch (static_cast<TrackID>(a_bbox.armor_number)) {
                 case RED_1: type_str = "RED_Hero";
                     break;
                 case RED_2: type_str = "RED_Engineer";
@@ -271,8 +271,8 @@ void DeepSort::ArmorMatch::visualize_matching(const cv::Mat &frame, const std::v
     cv::waitKey(1);
 }
 
-std::map<DeepSort::TrackeID, int> DeepSort::ArmorMatch::GetVehicleArmorNumber() {
-    std::map<TrackeID, int> result;
+std::map<DeepSort::TrackID, int> DeepSort::ArmorMatch::GetVehicleArmorNumber() {
+    std::map<TrackID, int> result;
     auto trackers = data_manager_.get_active_trackers();
 
     for (const auto &tracker: trackers) {

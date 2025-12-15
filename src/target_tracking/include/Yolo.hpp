@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <onnxruntime/onnxruntime_cxx_api.h>
+#include <utility>
 #include <vector>
 #include <memory>
 #include <algorithm>
@@ -18,6 +19,7 @@ namespace Yolo_Type {
         "1", "2", "3", "4", "sentry"
     };
 
+
     constexpr int DEFAULT_INPUT_WIDTH = 640;
     constexpr int DEFAULT_INPUT_HEIGHT = 640;
     constexpr float DEFAULT_CONF_THRESHOLD = 0.5f;
@@ -27,11 +29,11 @@ namespace Yolo_Type {
     template<int INPUT_WIDTH = DEFAULT_INPUT_WIDTH,
         int INPUT_HEIGHT = DEFAULT_INPUT_HEIGHT,
         float CONF_THRESH = DEFAULT_CONF_THRESHOLD,
-        float NMS_THRESH = DEFAULT_NMS_THRESHOLD,
-        int NUM_CLASSES = static_cast<int>(COCO_CLASSES.size())>
+        float NMS_THRESH = DEFAULT_NMS_THRESHOLD>
     class YoloDetector {
     public:
-        explicit YoloDetector(const std::string &model_path = "../model/armor.onnx");
+        explicit YoloDetector(const std::string &model_path = "../model/armor.onnx",
+                              const std::vector<std::string> &CLASSES = COCO_CLASSES);
 
         template<typename MatType = cv::Mat>
         std::vector<Detection> detect(const MatType &image);
@@ -40,6 +42,8 @@ namespace Yolo_Type {
         void draw_detections(MatType &img, const std::vector<Detection> &detections);
 
     private:
+        const std::vector<std::string> classes_;
+
         template<typename MatType = cv::Mat>
         cv::Mat preprocess(const MatType &img);
 
@@ -54,9 +58,9 @@ namespace Yolo_Type {
 }
 
 namespace Yolo_Type {
-    template<int W, int H, float C, float N, int NC>
-    YoloDetector<W, H, C, N, NC>::YoloDetector(const std::string &model_path)
-        : memory_info_(Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeCPU)) {
+    template<int W, int H, float C, float N>
+    YoloDetector<W, H, C, N>::YoloDetector(const std::string &model_path, const std::vector<std::string> &CLASSES)
+        : memory_info_(Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeCPU)), classes_(CLASSES) {
         env_ = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "YOLOv11_Inference");
         Ort::SessionOptions session_options;
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
@@ -66,9 +70,9 @@ namespace Yolo_Type {
         input_shape_ = {1, 3, H, W}; // NCHW
     }
 
-    template<int W, int H, float C, float N, int NC>
+    template<int W, int H, float C, float N>
     template<typename MatType>
-    std::vector<Detection> YoloDetector<W, H, C, N, NC>::detect(const MatType &image) {
+    std::vector<Detection> YoloDetector<W, H, C, N>::detect(const MatType &image) {
         cv::Mat input_blob = preprocess(image);
 
         Ort::AllocatorWithDefaultOptions allocator;
@@ -97,12 +101,12 @@ namespace Yolo_Type {
         return postprocess(output_mat, cv::Mat(image));
     }
 
-    template<int W, int H, float C, float N, int NC>
+    template<int W, int H, float C, float N>
     template<typename MatType>
-    void YoloDetector<W, H, C, N, NC>::draw_detections(MatType &img, const std::vector<Detection> &detections) {
+    void YoloDetector<W, H, C, N>::draw_detections(MatType &img, const std::vector<Detection> &detections) {
         for (const auto &det: detections) {
             cv::rectangle(img, det.box, cv::Scalar(0, 255, 0), 2);
-            if (det.class_id >= 0 && det.class_id < NC) {
+            if (det.class_id >= 0 && det.class_id < classes_.size()) {
                 std::string label = COCO_CLASSES[det.class_id] + " " + std::to_string(det.confidence).substr(0, 4);
                 cv::putText(img, label, cv::Point(det.box.x, det.box.y - 5),
                             cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
@@ -110,9 +114,9 @@ namespace Yolo_Type {
         }
     }
 
-    template<int W, int H, float C, float N, int NC>
+    template<int W, int H, float C, float N>
     template<typename MatType>
-    cv::Mat YoloDetector<W, H, C, N, NC>::preprocess(const MatType &img) {
+    cv::Mat YoloDetector<W, H, C, N>::preprocess(const MatType &img) {
         float scale_x = static_cast<float>(W) / img.cols;
         float scale_y = static_cast<float>(H) / img.rows;
         float scale = std::min(scale_x, scale_y);
@@ -132,13 +136,13 @@ namespace Yolo_Type {
         return input_img;
     }
 
-    template<int W, int H, float C, float N, int NC>
+    template<int W, int H, float C, float N>
     template<typename T>
-    std::vector<Detection> YoloDetector<W, H, C, N, NC>::postprocess(const cv::Mat &output, const cv::Mat &img) {
+    std::vector<Detection> YoloDetector<W, H, C, N>::postprocess(const cv::Mat &output, const cv::Mat &img) {
         std::vector<Detection> detections;
 
         int num_anchors = output.rows;
-        int num_classes = NC;
+        int num_classes = classes_.size();
 
         T *data = reinterpret_cast<T *>(output.data); // 模板化数据类型
 
@@ -160,10 +164,10 @@ namespace Yolo_Type {
 
             // 提取类别ID和坐标
             int class_id = std::max_element(cls_ptr, cls_ptr + num_classes) - cls_ptr;
-            float cx = static_cast<float>(data[0]);
-            float cy = static_cast<float>(data[1]);
-            float bw = static_cast<float>(data[2]);
-            float bh = static_cast<float>(data[3]);
+            auto cx = static_cast<float>(data[0]);
+            auto cy = static_cast<float>(data[1]);
+            auto bw = static_cast<float>(data[2]);
+            auto bh = static_cast<float>(data[3]);
 
             // 转换xyxy并还原到原图尺寸
             float x1 = (cx - bw / 2.0f - pad_w) / scale;
@@ -177,7 +181,11 @@ namespace Yolo_Type {
             x2 = std::max(0.0f, std::min(x2, img_w - 1));
             y2 = std::max(0.0f, std::min(y2, img_h - 1));
 
-            detections.push_back({class_id, static_cast<float>(conf), cv::Rect(cv::Point(x1, y1), cv::Point(x2, y2))});
+            detections.push_back({
+                class_id, static_cast<float>(conf),
+                cv::Rect(cv::Point(static_cast<int>(x1), static_cast<int>(y1)),
+                         cv::Point(static_cast<int>(x2), static_cast<int>(y2)))
+            });
             data += num_classes + 4;
         }
 

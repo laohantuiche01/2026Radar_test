@@ -55,7 +55,7 @@ namespace DeepSort {
                                 const std::map<int, int> &armor_vehicle_map);
 
         // 获取车辆对应的装甲板数字（核心接口）
-        std::map<TrackeID, int> GetVehicleArmorNumber();
+        std::map<TrackID, int> GetVehicleArmorNumber();
 
         //track_id获取
         std::map<int, int> GetTrackIdArmorNumber();
