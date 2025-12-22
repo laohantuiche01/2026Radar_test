@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.8)
 project(target_tracking)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
+if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif ()
+
+include(${CMAKE_SOURCE_DIR}/cmake/TensorRTConfig.cmake)
 
 set(CMAKE_CXX_STANDARD 23)
 
@@ -16,6 +18,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(CUDAToolkit REQUIRED)
 ament_auto_find_build_dependencies()
 
 # 增加测试文件
@@ -42,6 +45,8 @@ target_link_libraries(model_debug
 # 增加测试文件
 ament_auto_add_executable(node_debug
         test/image_node.cpp
+        include/Deepsort/DeepsortHelper.cpp
+        include/Deepsort/Deepsort.cpp
 )
 ament_target_dependencies(node_debug
         rclcpp
@@ -49,12 +54,17 @@ ament_target_dependencies(node_debug
         geometry_msgs
         sensor_msgs
         cv_bridge
+        CUDAToolkit
 )
 include_directories(node_debug
         ${EIGEN3_INCLUDE_DIR}
+        ${TensorRT_INCLUDE_DIR}
+        ${CUDAToolkit_INCLUDE_DIRS}
 )
 target_link_libraries(node_debug
         onnxruntime
+        ${TensorRT_LIBRARY}
+        ${CUDA_LIBS}
 )
 
 # 编译为库
@@ -95,11 +105,11 @@ ament_export_targets(export_${PROJECT_NAME}
 )
 ament_export_dependencies(rclcpp)
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  set(ament_cmake_copyright_FOUND TRUE)
-  set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
+if (BUILD_TESTING)
+    find_package(ament_lint_auto REQUIRED)
+    set(ament_cmake_copyright_FOUND TRUE)
+    set(ament_cmake_cpplint_FOUND TRUE)
+    ament_lint_auto_find_test_dependencies()
+endif ()
 
 ament_package()

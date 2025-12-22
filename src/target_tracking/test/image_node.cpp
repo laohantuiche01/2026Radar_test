@@ -3,12 +3,15 @@
 #include "sensor_msgs/msg/image.hpp"
 #include "cv_bridge/cv_bridge.h"
 
+const std::vector<std::string> VEHICLE_CLASSES = {"car"};
+const std::vector<std::string> NUM_CLASSES = {"1", "2", "3", "4"};
+
 class DeepsortTest : public rclcpp::Node {
 public:
-    DeepsortTest() : Node("deepsort_test") {
-        detector = Yolo_Type::YoloDetector<128, 128, 0.5f, 0.5f, 5>("../model/armor.onnx");
-        matcher = std::make_shared<DeepSort::ArmorMatch>(false,1000);
-
+    DeepsortTest() : Node("deepsort_test"),
+                     detector(Yolo_Type::YoloDetector<1088, 1088, 0.5f, 0.5f>("../model/armor.onnx", NUM_CLASSES)),
+                     vehicle_detector(
+                         Yolo_Type::YoloDetector<1088, 1088, 0.5f, 0.5f>("../model/vehicle.onnx", VEHICLE_CLASSES)) {
         sub_ = this->create_subscription<sensor_msgs::msg::Image>(
             "/sensor_far/raw/image", 10,
             [this](const sensor_msgs::msg::Image::ConstSharedPtr msg) {
@@ -22,15 +25,31 @@ public:
                     cv::Mat image;
                     cv::cvtColor(temp_image, image, cv::COLOR_BGR2RGB);
 
-                    auto detect = detector.detect(image);
-                    auto detect_bbox = DeepSort::ArmorBBox::from_yolo_to_armorbbox(detect);
+                    auto armor_detection = detector.detect(image);
+                    auto vehicle_detection = vehicle_detector.detect(image);
 
-                    matcher->Match(detect_bbox, image);
-                    auto vehicle_armor_map = matcher->GetVehicleArmorNumber();
-                    for (const auto &[vehicle_id, armor_num]: vehicle_armor_map) {
-                        std::cout << "车辆类型ID: " << static_cast<int>(vehicle_id)
-                                << " 装甲板数字: " << armor_num << std::endl;
+                    auto results = control.track(armor_detection, vehicle_detection);
+
+                     for (auto &result: results) {
+                         cv::rectangle(image, cv::Point(result.box.x, result.box.y),
+                                       cv::Point(result.box.x + result.box.width, result.box.y + result.box.height),
+                                       cv::Scalar(0, 0, 255));
+                     }
+
+                    for (auto &vehicle: vehicle_detection) {
+                        cv::rectangle(image, cv::Point(vehicle.box.x, vehicle.box.y),
+                                      cv::Point(vehicle.box.x + vehicle.box.width, vehicle.box.y + vehicle.box.height),
+                                      cv::Scalar(0, 255, 0));
                     }
+
+                    for (auto &vehicle: armor_detection) {
+                        cv::rectangle(image, cv::Point(vehicle.box.x, vehicle.box.y),
+                                      cv::Point(vehicle.box.x + vehicle.box.width, vehicle.box.y + vehicle.box.height),
+                                      cv::Scalar(255, 0, 0));
+                        std::cout<<vehicle.class_id<<std::endl;
+                    }
+
+
                     cv::imshow("result gmm", image);
                     cv::waitKey(30);
                 } catch (cv_bridge::Exception &e) {
@@ -45,9 +64,10 @@ public:
     }
 
 private:
+    DeepSort::DeepSortControl control;
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr sub_;
-    Yolo_Type::YoloDetector<128, 128, 0.5f, 0.5f, 5> detector;
-    std::shared_ptr<DeepSort::ArmorMatch> matcher;
+    Yolo_Type::YoloDetector<1088, 1088, 0.5f, 0.5f> detector;
+    Yolo_Type::YoloDetector<1088, 1088, 0.5f, 0.5f> vehicle_detector;
 };
 
 int main(int argc, char **argv) {
