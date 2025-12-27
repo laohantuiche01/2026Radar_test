@@ -22,6 +22,14 @@ namespace DeepSort {
         INFANTRY_3 = 3, //3号步兵
         INFANTRY_4 = 4, //4号步兵
         SENTRY = 5, //哨兵
+        UNKNOWN = -1, //未知状态
+    };
+
+    enum RED_or_BLUE
+    {
+        BLUE = 0,
+        RED = 1,
+        UNKOWN = -1,
     };
 
     struct BBox;
@@ -50,7 +58,7 @@ namespace DeepSort {
         }
 
         float x1, y1, x2, y2; // 左上角/右下角坐标
-        float score; // 检测置信度
+        float score; // 检测置信度 =================================================================================
         int id;
         int armor_number; // 装甲板数字（对应TrackeID）
     };
@@ -64,6 +72,7 @@ namespace DeepSort {
             y2 = 0;
             score = 0;
             vehicle_id = static_cast<TrackID>(-1);
+            camp = static_cast<RED_or_BLUE>(-1);
             track_id = -1;
         } ;
 
@@ -79,10 +88,11 @@ namespace DeepSort {
         }
 
         float x1, y1, x2, y2; // 左上角/右下角坐标
-        float score; // 检测置信度
+        float score; // 检测置信度  =================================================
         ArmorBBox armor_bbox; //所包含的装甲板
         int track_id = -1; // 跟踪ID
         TrackID vehicle_id = static_cast<TrackID>(-1); // 车辆类型ID（红/蓝方）
+        RED_or_BLUE camp=static_cast<RED_or_BLUE>(-1); //蓝方还是红方
     };
 
     // 跟踪器状态

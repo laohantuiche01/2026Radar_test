@@ -4,18 +4,26 @@
 #include "basic.hpp"
 #include "Kalman/Kalman.hpp"
 #include <opencv2/opencv.hpp>
+#include <utility>
 
 namespace DeepSort {
+    /**
+    *
+    *
+    */
     class Tracker {
     private:
         KalmanFilter kf_; // 卡尔曼滤波器
         TrackState state_ = TENTATIVE; // 跟踪状态
         const int track_id_; // 跟踪ID（不可修改）
         TrackID vehicle_id_ = static_cast<TrackID>(-1); // 车辆类型ID
+        RED_or_BLUE camp_ =static_cast<RED_or_BLUE>(-1); // 阵营
         int armor_number_ = -1; // 装甲板数字
         int consecutive_occlusion_ = 0; // 连续遮挡帧数
         int hits_ = 0; // 连续匹配成功帧数
         int age_ = 0; // 跟踪器总存活帧数
+
+
         std::shared_ptr<BBox> vehicle_bbox_; // 车辆边界框
         cv::Rect2f last_known_vehicle_box_; // 最后已知的车辆框（用于遮挡时参考）
 
@@ -34,9 +42,15 @@ namespace DeepSort {
         }
 
     public:
-        // 显式构造函数，强制指定track_id
-        explicit Tracker(int track_id) : track_id_(track_id) {
+        // 显式构造函数，强制指定track_id(本身自带的id，并非车辆id)
+        Tracker(int track_id) : track_id_(track_id) {
             vehicle_bbox_ = std::make_shared<BBox>();
+        }
+
+        Tracker(int track_id,std::shared_ptr<BBox> vehicle_bbox_ptr) :
+        track_id_(track_id),
+        vehicle_bbox_(std::move(vehicle_bbox_ptr))
+        {
         }
 
         // 禁用拷贝
@@ -47,31 +61,18 @@ namespace DeepSort {
         // 移动构造
         Tracker(Tracker &&) = default;
 
-        Tracker &operator=(Tracker &&) = default;
+        Tracker &operator=(Tracker &&) = delete;
 
-        // 初始化跟踪器
-        void init(const ArmorBBox &armor_bbox, const BBox &vehicle_bbox, int armor_number) {
-            kf_.init(armor_bbox); // 用车辆初始化卡尔曼
-            *vehicle_bbox_ = vehicle_bbox;
-            bind_armor(armor_bbox, armor_number); // 绑定装甲板信息
-            last_known_vehicle_box_ = cv::Rect2f(vehicle_bbox.x1, vehicle_bbox.y1,
-                                                 vehicle_bbox.x2 - vehicle_bbox.x1,
-                                                 vehicle_bbox.y2 - vehicle_bbox.y1);
+        //车辆初始化
+        void init()
+        {
+            kf_.init(*vehicle_bbox_);
+            last_known_vehicle_box_ = cv::Rect2f(vehicle_bbox_.get()->x1, vehicle_bbox_.get()->y1,
+                                                 vehicle_bbox_.get()->x2 - vehicle_bbox_.get()->x1,
+                                                 vehicle_bbox_.get()->y2 - vehicle_bbox_.get()->y1);
             hits_ = 1;
             age_ = 1;
-            update_state(); // 初始状态检查
-        }
-
-        // 仅初始化车辆跟踪
-        void init(const BBox &vehicle_bbox) {
-            kf_.init(vehicle_bbox); // 用车辆框初始化卡尔曼
-            *vehicle_bbox_ = vehicle_bbox;
-            last_known_vehicle_box_ = cv::Rect2f(vehicle_bbox.x1, vehicle_bbox.y1,
-                                                 vehicle_bbox.x2 - vehicle_bbox.x1,
-                                                 vehicle_bbox.y2 - vehicle_bbox.y1);
-            hits_ = 1;
-            age_ = 1;
-            update_state(); // 初始状态检查
+            update_state();
         }
 
         // 预测下一帧位置
@@ -90,15 +91,13 @@ namespace DeepSort {
         // 更新跟踪器
         void update(const ArmorBBox &armor_bbox, const BBox &vehicle_bbox) {
             if (state_ == DELETED) return;
-
             // 更新卡尔曼滤波
-            kf_.update(vehicle_bbox);
-            *vehicle_bbox_ = vehicle_bbox;
+            *vehicle_bbox_=vehicle_bbox; //更新
+            kf_.update(*vehicle_bbox_);
             last_known_vehicle_box_ = cv::Rect2f(vehicle_bbox.x1, vehicle_bbox.y1,
                                                  vehicle_bbox.x2 - vehicle_bbox.x1,
                                                  vehicle_bbox.y2 - vehicle_bbox.y1);
-
-            // 绑定装甲板信息（若存在）
+            // 绑定装甲板信息
             if (armor_bbox.armor_number != -1) {
                 bind_armor(armor_bbox, armor_bbox.armor_number);
             }
@@ -109,10 +108,9 @@ namespace DeepSort {
             update_state(); // 检查状态转换
         }
 
-        // 仅更新车辆框
-        void update_vehicle(const BBox &vehicle_bbox) {
+        // 仅更新车辆框（直接重载）
+        void update(const BBox &vehicle_bbox) {
             if (state_ == DELETED) return;
-
             kf_.update(vehicle_bbox); // 用车辆框更新卡尔曼
             *vehicle_bbox_ = vehicle_bbox;
             last_known_vehicle_box_ = cv::Rect2f(vehicle_bbox.x1, vehicle_bbox.y1,
@@ -136,7 +134,6 @@ namespace DeepSort {
         // 绑定装甲板到车辆
         void bind_armor(const ArmorBBox &armor_bbox, int armor_number) {
             vehicle_bbox_->armor_bbox = armor_bbox;
-            //vehicle_bbox_->armor_bbox.father = vehicle_bbox_;
             armor_number_ = armor_number;
             vehicle_id_ = static_cast<TrackID>(armor_number_); // 装甲板数字映射到车辆ID
         }
