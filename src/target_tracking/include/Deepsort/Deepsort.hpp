@@ -9,7 +9,6 @@
 #include "backdel/backdel.hpp"
 #include "DeepsortHelper.hpp"
 #include "Yolo.hpp"
-#include "CudaYolo.hpp"
 
 namespace DeepSort {
     struct OutputDetection {

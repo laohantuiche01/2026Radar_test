@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "armor_detector/light_corner_corrector.hpp"
+#include "../include/armor_detector/light_corner_corrector.hpp"
 
 #include <numeric>
 

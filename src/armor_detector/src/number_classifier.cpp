@@ -33,8 +33,8 @@
 // 3rd party
 #include <fmt/format.h>
 // project
-#include "armor_detector/number_classifier.hpp"
-#include "armor_detector/types.hpp"
+#include "../include/armor_detector/number_classifier.hpp"
+#include "../include/armor_detector/types.hpp"
 inline void *func(const std::vector<det::Binding> &Shape, cv::Mat img) {
     cv::Mat tensor;
     cv::dnn::blobFromImage(img, tensor, 1 / 255.0, cv::Size(128, 128), cv::Scalar(), true);

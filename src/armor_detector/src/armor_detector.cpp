@@ -16,7 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "armor_detector/armor_detector.hpp"
+#include "../include/armor_detector/armor_detector.hpp"
 // std
 #include <algorithm>
 #include <cmath>
@@ -30,7 +30,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 // project
-#include "armor_detector/types.hpp"
+#include "../include/armor_detector/types.hpp"
 
 #include <fmt/format.h>
 

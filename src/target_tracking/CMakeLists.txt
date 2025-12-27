@@ -9,7 +9,15 @@ include(${CMAKE_SOURCE_DIR}/cmake/TensorRTConfig.cmake)
 
 set(CMAKE_CXX_STANDARD 23)
 
-# find dependencies
+#######################
+## find dependencies ##
+#######################
+
+set(ONNXRUNTIME_ROOT "/home/laohantuiche/dependence/onnxruntime/onnxruntime")
+set(ONNXRUNTIME_INCLUDE_DIR ${ONNXRUNTIME_ROOT}/include)
+set(ONNXRUNTIME_LIB_DIR ${ONNXRUNTIME_ROOT}/lib)
+set(ONNXRUNTIME_LIBS ${ONNXRUNTIME_LIB_DIR}/libonnxruntime.so)
+
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_auto REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -34,12 +42,13 @@ ament_target_dependencies(model_debug
         sensor_msgs
         cv_bridge
 )
-include_directories(model_debug
-        include/basic.hpp
+target_include_directories(model_debug PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${EIGEN3_INCLUDE_DIR}
+        ${ONNXRUNTIME_INCLUDE_DIR}
 )
-target_link_libraries(model_debug
-        onnxruntime
+target_link_directories(model_debug PRIVATE
+        ${ONNXRUNTIME_LIB_DIR}
 )
 
 # 增加测试文件
@@ -56,15 +65,17 @@ ament_target_dependencies(node_debug
         cv_bridge
         CUDAToolkit
 )
-include_directories(node_debug
-        ${EIGEN3_INCLUDE_DIR}
-        ${TensorRT_INCLUDE_DIR}
-        ${CUDAToolkit_INCLUDE_DIRS}
+target_include_directories(node_debug PRIVATE
+        ${ONNXRUNTIME_INCLUDE_DIR}
 )
 target_link_libraries(node_debug
-        onnxruntime
         ${TensorRT_LIBRARY}
         ${CUDA_LIBS}
+        ${EIGEN3_LIBRARIES}
+        ${ONNXRUNTIME_LIBS}
+)
+target_link_directories(node_debug PRIVATE
+        ${ONNXRUNTIME_LIB_DIR}
 )
 
 # 编译为库

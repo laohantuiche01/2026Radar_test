@@ -17,16 +17,11 @@ namespace DeepSort {
     const float IOU_THRESHOLD = 0.003; // IOU匹配阈值
 
     enum TrackID {
-        RED_1 = 1, //红方英雄
-        RED_2 = 2, //红方工程
-        RED_3 = 3, //红方3号步兵
-        RED_4 = 4, //红方4号步兵
-        RED_SENTRY = 5, //红方哨兵
-        BLUE_1 = 6, //蓝方英雄
-        BLUE_2 = 7, //蓝方工程
-        BLUE_3 = 8, //蓝方3号步兵
-        BLUE_4 = 9, //蓝方4号步兵
-        BLUE_SENTRY = 10, //蓝方哨兵
+        HERO_1 = 1, //英雄
+        ENGINEERING_2 = 2, //工程
+        INFANTRY_3 = 3, //3号步兵
+        INFANTRY_4 = 4, //4号步兵
+        SENTRY = 5, //哨兵
     };
 
     struct BBox;

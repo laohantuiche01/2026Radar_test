@@ -46,7 +46,7 @@ namespace ckyf {
     // the detected armors
     class DetectorNode : public rclcpp::Node {
     public:
-        DetectorNode(const rclcpp::NodeOptions &options);
+        DetectorNode();
 
     private:
         std::string imageTopic;

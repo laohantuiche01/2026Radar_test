@@ -1,21 +1,3 @@
-// Copyright Chen Jun 2023. Licensed under the MIT License.
-//
-// Additional modifications and features by Chengfu Zou, Labor. Licensed under
-// Apache License 2.0.
-//
-// Copyright (C) FYT Vision Group. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 // std
 #include <algorithm>
@@ -32,35 +14,37 @@
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/qos.hpp>
+#include <rclcpp/rclcpp.hpp>
 // third party
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 // project
-#include "armor_detector/armor_detector_node.hpp"
+#include "../include/armor_detector/armor_detector_node.hpp"
 
 #include <fmt/format.h>
 
-#include "armor_detector/types.hpp"
+#include "/opt/ros/humble/include/rclcpp/rclcpp/logging.hpp"
+#include "../include/armor_detector/types.hpp"
 int num = 0;
 int count = 0;
 
 namespace ckyf {
-    DetectorNode::DetectorNode(const rclcpp::NodeOptions &options)
-        : Node("armor_detector", options) {
+    DetectorNode::DetectorNode()
+        : Node("armor_detector") {
         RCLCPP_INFO(get_logger(), "Starting ArmorDetectorNode!");
         //BCN 自己车辆颜色 0是红色，1是蓝色
         selfColor = this->declare_parameter("self_color", 0);
         // Detector
         detector_ = initDetector();
 
-        imageTopic = this->declare_parameter("image_topic", std::string("multi_raw_0"));
+        imageTopic = this->declare_parameter("image_topic", std::string("/sensor_far/raw/image"));
         //BCN img sub
-        rect_pub_=this->create_publisher<std_msgs::msg::Float64MultiArray>(imageTopic+"/rect", 1);
+        rect_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(imageTopic + "/rect", 1);
         img_sub_ = this->create_subscription<sensor_msgs::msg::Image>(imageTopic, 1,
                                                                       std::bind(&DetectorNode::imageCallback, this,
-                                                                                std::placeholders::_1));
-        raw_robot_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>(imageTopic+"/raw_robot", 5);
+                                                                          std::placeholders::_1));
+        raw_robot_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>(imageTopic + "/raw_robot", 5);
 
         // Debug Publishers
         debug_ = this->declare_parameter("debug", true);
@@ -74,6 +58,7 @@ namespace ckyf {
             debug_ ? createDebugPublishers() : destroyDebugPublishers();
         });
     }
+
     void DetectorNode::imageCallback(sensor_msgs::msg::Image::SharedPtr img_msg) {
         geometry_msgs::msg::PointStamped robot_img_msg;
         robot_img_msg.header = img_msg->header;
@@ -83,12 +68,12 @@ namespace ckyf {
         }
         // Detect armors
         img_msg->header.stamp = this->now();
-        auto armors = detectArmors(img_msg);  ///====================================================有bug
+        auto armors = detectArmors(img_msg); ///====================================================有bug
 
         std::for_each(armors.begin(), armors.end(), [this, &robot_img_msg](Armor &armor) {
             robot_img_msg.header.frame_id = imageTopic;
             robot_img_msg.point.x = armor.center.x;
-            robot_img_msg.point.y = armor.center.y + (armor.left_light.length + armor.right_light.length)/2.0/1.2;
+            robot_img_msg.point.y = armor.center.y + (armor.left_light.length + armor.right_light.length) / 2.0 / 1.2;
 
             if (armor.number == "1") robot_img_msg.point.z = 1;
             if (armor.number == "2") robot_img_msg.point.z = 2;
@@ -100,8 +85,8 @@ namespace ckyf {
             std_msgs::msg::Float64MultiArray robot_rect_msg;
             robot_rect_msg.data.push_back(armor.left_light.top.x);
             robot_rect_msg.data.push_back(armor.left_light.top.y);
-            robot_rect_msg.data.push_back(armor.right_light.top.x-armor.left_light.top.x);
-            robot_rect_msg.data.push_back(armor.right_light.bottom.y-armor.left_light.top.y);
+            robot_rect_msg.data.push_back(armor.right_light.top.x - armor.left_light.top.x);
+            robot_rect_msg.data.push_back(armor.right_light.bottom.y - armor.left_light.top.y);
             robot_rect_msg.data.push_back(robot_img_msg.point.z);
 
             rect_pub_->publish(robot_rect_msg);
@@ -109,10 +94,10 @@ namespace ckyf {
         });
         // count++;
         // if (count%10 == 0) return;f
-        for (auto armor : armors) {
+        for (auto armor: armors) {
             cv::Mat robot_img;
             // auto name = fmt::format("/home/zhu/下载/datasets/9_{}.png", num);
-            cv::resize(armor.number_img,robot_img,cv::Size(128,128), cv::INTER_AREA);
+            cv::resize(armor.number_img, robot_img, cv::Size(128, 128), cv::INTER_AREA);
             // cv::imwrite(name,robot_img);
             // num++;
             // std::cout<<name<<std::endl;
@@ -135,8 +120,8 @@ namespace ckyf {
             .max_ratio = declare_parameter("light.max_ratio", 0.4),
             .max_angle = declare_parameter("light.max_angle", 40.0),
             .color_diff_thresh = static_cast<int>(declare_parameter("light.color_diff_thresh", 25)),
-            .min_h = static_cast<int>(declare_parameter("light.min_h", 90)),
-            .max_h = static_cast<int>(declare_parameter("light.max_h", 150)),
+            .min_h = static_cast<int>(declare_parameter("light.min_h", 90)), //90
+            .max_h = static_cast<int>(declare_parameter("light.max_h", 150)), //150
             .min_s = static_cast<int>(declare_parameter("light.min_s", 0)),
             .max_s = static_cast<int>(declare_parameter("light.max_s", 255)),
             .min_v = static_cast<int>(declare_parameter("light.min_v", 255)),
@@ -145,7 +130,8 @@ namespace ckyf {
             .max_length = declare_parameter("light.max_length", 25.0)
 
         };
-        RCLCPP_INFO(this->get_logger(), "HSV : %d %d %d %d %d %d", l_params.min_h, l_params.min_s, l_params.min_v, l_params.max_h, l_params.max_s, l_params.max_v);
+        RCLCPP_INFO(this->get_logger(), "HSV : %d %d %d %d %d %d", l_params.min_h, l_params.min_s, l_params.min_v,
+                    l_params.max_h, l_params.max_s, l_params.max_v);
         Detector::ArmorParams a_params = {
             .min_light_ratio = declare_parameter("armor.min_light_ratio", 0.6),
             .min_small_center_distance = declare_parameter("armor.min_small_center_distance", 0.8),
@@ -279,9 +265,10 @@ namespace ckyf {
     }
 }
 
-#include "rclcpp_components/register_node_macro.hpp"
 
-// Register the component with class_loader.
-// This acts as a sort of entry point, allowing the component to be discoverable
-// when its library is being loaded into a running process.
-RCLCPP_COMPONENTS_REGISTER_NODE(ckyf::DetectorNode)
+int main(int argc, char **argv) {
+    rclcpp::init(argc, argv);
+    rclcpp::spin(std::make_shared<ckyf::DetectorNode>());
+    rclcpp::shutdown();
+    return 0;
+}
