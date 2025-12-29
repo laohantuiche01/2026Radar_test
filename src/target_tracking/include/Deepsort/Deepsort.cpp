@@ -23,7 +23,7 @@ namespace DeepSort {
         //更新已匹配的跟踪器
         for (const auto &[track_idx, det_idx]: matches) {
             const auto& tracker = active_trackers[track_idx];
-            tracker->update(vehicle_detections[det_idx]);
+            tracker->update(armor_detections[det_idx],vehicle_detections[det_idx]);
             matched_trackers[track_idx] = true;
         }
 

@@ -12,7 +12,7 @@ namespace DeepSort {
     // 全局配置
     const float MAX_DISTANCE = 1.0; // 余弦距离阈值
     const int MAX_AGE = 30; // 最大未匹配帧数
-    const int N_INIT = 3; // 初始匹配帧数
+    const int N_INIT = 15; // 初始匹配帧数
     const int FEATURE_DIM = 128; // 重识别特征维度
     const float IOU_THRESHOLD = 1.3; // IOU匹配阈值
 

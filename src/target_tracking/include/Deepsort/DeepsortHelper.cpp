@@ -9,7 +9,7 @@ std::vector<DeepSort::ArmorBBox> DeepSort::Interface_::convert_armor_detections(
             static_cast<float>(det.box.y),
             static_cast<float>(det.box.x + det.box.width),
             static_cast<float>(det.box.y + det.box.height),
-            static_cast<TrackID>(-1)
+            static_cast<TrackID>(det.class_id)
         );
     }
     return result;

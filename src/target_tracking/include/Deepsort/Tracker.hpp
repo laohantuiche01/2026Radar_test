@@ -96,7 +96,7 @@ namespace DeepSort {
             age_++;
 
             // 未确认跟踪器若未达到匹配帧数，直接标记删除
-            // if (state_ == TENTATIVE && hits_ < N_INIT) {
+            // if (state_ == TENTATIVE && hits_ < N_INIT && age_ >= N_INIT) {
             //     state_ = DELETED;
             // }
         }

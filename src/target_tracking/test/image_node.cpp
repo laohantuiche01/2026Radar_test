@@ -22,7 +22,7 @@ public:
             {
                 auto armor_msg = msg->data;
                 armor_results_.resize(armor_msg.size());
-                for (int i = 0; i < static_cast<int>(armor_msg.size()); ++i)
+                for (int i = 0; i <= static_cast<int>(armor_msg.size()); ++i)
                 {
                     armor_results_[i] = armor_msg[i];
                 }
@@ -66,7 +66,7 @@ public:
                         cv::rectangle(image, cv::Point(result.box.x, result.box.y),
                                       cv::Point(result.box.x + result.box.width, result.box.y + result.box.height),
                                       cv::Scalar(0, 0, 255));
-                        std::string text= std::to_string(result.id)+" ===";
+                        std::string text= std::to_string(result.armor_number)+" ===";
                         cv::putText(image,text, cv::Point(result.box.x, result.box.y),cv::FONT_HERSHEY_SIMPLEX,
                             0.5, cv::Scalar(0, 255, 0), 1);
                     }
