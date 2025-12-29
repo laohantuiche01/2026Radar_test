@@ -8,20 +8,22 @@ namespace DeepSort {
         const std::vector<BBox> &vehicle_detections,
         const std::vector<ArmorBBox> &armor_detections
     ) {
+        //获取所有活动跟踪器
+        auto active_trackers = data_manager_.get_active_trackers();
+
         //预测所有跟踪器状态
         data_manager_.predict_all_trackers();
 
         //车辆级联匹配
-        auto matches = cascade_matching(vehicle_detections);
+        auto matches = cascade_matching(vehicle_detections,active_trackers);
 
         //更新跟踪器
-        auto active_trackers = data_manager_.get_active_trackers();
         std::vector<bool> matched_trackers(active_trackers.size(), false);
 
         //更新已匹配的跟踪器
         for (const auto &[track_idx, det_idx]: matches) {
-            auto tracker = active_trackers[track_idx];
-            tracker->update(armor_detections[det_idx], vehicle_detections[det_idx]);
+            const auto& tracker = active_trackers[track_idx];
+            tracker->update(vehicle_detections[det_idx]);
             matched_trackers[track_idx] = true;
         }
 
@@ -39,7 +41,7 @@ namespace DeepSort {
         }
         for (size_t i = 0; i < vehicle_detections.size(); ++i) {
             if (!matched_dets[i]) {
-                data_manager_.create_tracker(ArmorBBox(), vehicle_detections[i], -1);
+                data_manager_.create_tracker(vehicle_detections[i]);
             }
         }
 
@@ -65,33 +67,36 @@ namespace DeepSort {
         return results;
     }
 
-    std::map<int, int> DeepSort::cascade_matching(const std::vector<BBox> &detections) {
+    /**
+     *  使用了余弦距离  与  IOU进行匹配
+     * @param detections 这个是输入的检测到车辆的容器
+     * @param active_trackers 这个是依旧处于活动状态的车辆容器
+     * @return 得到两个容器索引的匹配表
+     */
+    std::map<int, int> DeepSort::cascade_matching(const std::vector<BBox> &detections,std::vector<std::shared_ptr<Tracker>> active_trackers) {
         std::map<int, int> matches;
-        auto active_trackers = data_manager_.get_active_trackers();
-        int n = active_trackers.size();
-        int m = detections.size();
+        int n = static_cast<int>(active_trackers.size());
+        int m = static_cast<int>(detections.size());
 
         if (n == 0 || m == 0) return matches;
 
-        // 构建代价矩阵(余弦距离+IOU)
-        Eigen::MatrixXf cost(n, m);
-        for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < m; ++j) {
-                // float cos_dist = cosine_distance(active_trackers[i]->get_vehicle_bbox()->feature,
-                //                                  detections[j].feature);
-                float cos_dist = 1.0f;
-                float iou_dist = 1.0f - iou(*active_trackers[i]->get_vehicle_bbox(), detections[j]);
-                cost(i, j) = 0.7f * cos_dist + 0.3f * iou_dist;
-            }
-        }
+         //构建代价矩阵(余弦距离+IOU)
+         Eigen::MatrixXf cost(n, m);
+         for (int i = 0; i < n; ++i) {
+             for (int j = 0; j < m; ++j) {
+                 float cos_dist = 1.0f;
+                 float iou_dist = 1.0f - iou(*active_trackers[i]->get_vehicle_bbox(), detections[j]);
+                 cost(i, j) = 0.0f * cos_dist + 1.0f * iou_dist;  //只进行了iou匹配，未进行与选匹配
+             }
+         }
 
-        // 匈牙利算法匹配
+         // 匈牙利算法匹配
         std::vector<int> match = hungarian(cost);
-        for (int i = 0; i < n; ++i) {
-            if (match[i] != -1 && cost(i, match[i]) < MAX_DISTANCE) {
-                matches[i] = match[i];
-            }
-        }
+         for (int i = 0; i < n; ++i) {
+             if (match[i] != -1 && cost(i, match[i]) < MAX_DISTANCE) {
+                 matches[i] = match[i];
+             }
+         }
 
         // 未匹配目标用IOU补充匹配
         std::vector<int> unmatched_tracks, unmatched_dets;
@@ -105,8 +110,8 @@ namespace DeepSort {
         }
 
         Eigen::MatrixXf iou_cost(unmatched_tracks.size(), unmatched_dets.size());
-        for (int i = 0; i < unmatched_tracks.size(); ++i) {
-            for (int j = 0; j < unmatched_dets.size(); ++j) {
+        for (int i = 0; i < static_cast<int>(unmatched_tracks.size()); ++i) {
+            for (int j = 0; j < static_cast<int>(unmatched_dets.size()); ++j) {
                 iou_cost(i, j) = 1.0f - iou(
                                      *active_trackers[unmatched_tracks[i]]->get_vehicle_bbox(),
                                      detections[unmatched_dets[j]]
@@ -115,7 +120,7 @@ namespace DeepSort {
         }
 
         std::vector<int> iou_match = hungarian(iou_cost);
-        for (int i = 0; i < unmatched_tracks.size(); ++i) {
+        for (int i = 0; i < static_cast<int>(unmatched_tracks.size()); ++i) {
             if (iou_match[i] != -1 && iou_cost(i, iou_match[i]) < (1.0f - IOU_THRESHOLD)) {
                 matches[unmatched_tracks[i]] = unmatched_dets[iou_match[i]];
             }
@@ -180,16 +185,20 @@ namespace DeepSort {
     }
 
     float DeepSort::iou(const BBox &a, const BBox &b) {
-        float x1 = std::max(a.x1, b.x1);
-        float y1 = std::max(a.y1, b.y1);
-        float x2 = std::min(a.x2, b.x2);
-        float y2 = std::min(a.y2, b.y2);
-        if (x2 < x1 || y2 < y1) return 0.0f;
+        //这里拓展区域是要调试参数的！！！！！！！！！！！！！！！！！！！
+        float delta_x=30.0f;
+        float delta_y=20.0f;
+        float x1 = std::max(a.x1, b.x1)-delta_x;
+        float y1 = std::max(a.y1, b.y1)-delta_y;
+        float x2 = std::min(a.x2, b.x2)+delta_x;
+        float y2 = std::min(a.y2, b.y2)+delta_y;
+        //if (x2 < x1 || y2 < y1) return 0.0f;
 
         float inter = (x2 - x1) * (y2 - y1);
         float area_a = (a.x2 - a.x1) * (a.y2 - a.y1);
         float area_b = (b.x2 - b.x1) * (b.y2 - b.y1);
-        return inter / (area_a + area_b - inter);
+
+        return inter / (area_a + area_b);
     }
 
     float DeepSort::cosine_distance(const Eigen::VectorXf &a, const Eigen::VectorXf &b) {

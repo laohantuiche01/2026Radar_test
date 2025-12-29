@@ -10,11 +10,11 @@
 
 namespace DeepSort {
     // 全局配置
-    const float MAX_DISTANCE = 0.2; // 余弦距离阈值
+    const float MAX_DISTANCE = 1.0; // 余弦距离阈值
     const int MAX_AGE = 30; // 最大未匹配帧数
     const int N_INIT = 3; // 初始匹配帧数
     const int FEATURE_DIM = 128; // 重识别特征维度
-    const float IOU_THRESHOLD = 0.003; // IOU匹配阈值
+    const float IOU_THRESHOLD = 1.3; // IOU匹配阈值
 
     enum TrackID {
         HERO_1 = 1, //英雄
@@ -36,44 +36,25 @@ namespace DeepSort {
 
     // 装甲板结构体
     struct ArmorBBox {
-        ArmorBBox() {
-            x1 = 0;
-            y1 = 0;
-            x2 = 0;
-            y2 = 0;
-            score = 0;
-            id = -1;
-            armor_number = -1;
-        }
-
-        ArmorBBox(float x, float y, float x1_, float y1_, float confidence,
-                  int id_, TrackID tracke_id) {
+        ArmorBBox() {x1 = 0;y1 = 0;x2 = 0;y2 = 0;armor_number = -1;}
+        ArmorBBox(float x, float y, float x1_, float y1_,TrackID tracke_id) {
             x1 = x;
             y1 = y;
             x2 = x1_;
             y2 = y1_;
-            score = confidence;
-            id = id_;
             armor_number = tracke_id;
         }
-
         float x1, y1, x2, y2; // 左上角/右下角坐标
-        float score; // 检测置信度 =================================================================================
-        int id;
         int armor_number; // 装甲板数字（对应TrackeID）
     };
 
     // 边界框结构体(这个是全车追踪的)
     struct BBox {
-        BBox() : armor_bbox() {
-            x1 = 0;
-            y1 = 0;
-            x2 = 0;
-            y2 = 0;
-            score = 0;
+        BBox() {x1 = 0;y1 = 0;x2 = 0;y2 = 0;score = 0;
             vehicle_id = static_cast<TrackID>(-1);
             camp = static_cast<RED_or_BLUE>(-1);
             track_id = -1;
+            armor_bbox = nullptr;
         } ;
 
         BBox(float x, float y, float x1_, float y1_, float confidence,
@@ -85,14 +66,15 @@ namespace DeepSort {
             score = confidence;
             vehicle_id = tracke_id_;
             track_id = id_;
+            armor_bbox = nullptr;
         }
 
         float x1, y1, x2, y2; // 左上角/右下角坐标
-        float score; // 检测置信度  =================================================
-        ArmorBBox armor_bbox; //所包含的装甲板
+        float score; // 检测置信度  =================================================这个可以设置成筛选的次数（待修改）
         int track_id = -1; // 跟踪ID
         TrackID vehicle_id = static_cast<TrackID>(-1); // 车辆类型ID（红/蓝方）
         RED_or_BLUE camp=static_cast<RED_or_BLUE>(-1); //蓝方还是红方
+        ArmorBBox* armor_bbox; //所包含的装甲板
     };
 
     // 跟踪器状态

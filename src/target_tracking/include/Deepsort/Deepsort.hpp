@@ -34,7 +34,7 @@ namespace DeepSort {
         DeepSortData &data_manager_; // 数据管理器引用
 
         // 级联匹配(车辆)
-        std::map<int, int> cascade_matching(const std::vector<BBox> &detections);
+        std::map<int, int> cascade_matching(const std::vector<BBox> &detections,std::vector<std::shared_ptr<Tracker>> active_trackers);
 
         // IOU匹配
         static float iou(const BBox &a, const BBox &b);

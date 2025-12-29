@@ -75,6 +75,19 @@ namespace DeepSort {
             update_state();
         }
 
+        //车辆初始化
+        void init(const BBox& vehicle_bbox)
+        {
+            *vehicle_bbox_=vehicle_bbox;
+            kf_.init(*vehicle_bbox_);
+            last_known_vehicle_box_ = cv::Rect2f(vehicle_bbox_.get()->x1, vehicle_bbox_.get()->y1,
+                                                 vehicle_bbox_.get()->x2 - vehicle_bbox_.get()->x1,
+                                                 vehicle_bbox_.get()->y2 - vehicle_bbox_.get()->y1);
+            hits_ = 1;
+            age_ = 1;
+            update_state();
+        }
+
         // 预测下一帧位置
         void predict() {
             if (state_ == DELETED) return;
@@ -83,9 +96,9 @@ namespace DeepSort {
             age_++;
 
             // 未确认跟踪器若未达到匹配帧数，直接标记删除
-            if (state_ == TENTATIVE && hits_ < N_INIT) {
-                state_ = DELETED;
-            }
+            // if (state_ == TENTATIVE && hits_ < N_INIT) {
+            //     state_ = DELETED;
+            // }
         }
 
         // 更新跟踪器
@@ -99,7 +112,7 @@ namespace DeepSort {
                                                  vehicle_bbox.y2 - vehicle_bbox.y1);
             // 绑定装甲板信息
             if (armor_bbox.armor_number != -1) {
-                bind_armor(armor_bbox, armor_bbox.armor_number);
+                bind_armor(armor_bbox);
             }
 
             // 重置遮挡计数，更新匹配计数
@@ -132,9 +145,9 @@ namespace DeepSort {
         }
 
         // 绑定装甲板到车辆
-        void bind_armor(const ArmorBBox &armor_bbox, int armor_number) {
-            vehicle_bbox_->armor_bbox = armor_bbox;
-            armor_number_ = armor_number;
+        void bind_armor(const ArmorBBox &armor_bbox) {
+            vehicle_bbox_->armor_bbox = const_cast<ArmorBBox*>(&armor_bbox);
+            armor_number_ = armor_bbox.armor_number;
             vehicle_id_ = static_cast<TrackID>(armor_number_); // 装甲板数字映射到车辆ID
         }
 

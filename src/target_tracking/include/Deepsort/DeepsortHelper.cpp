@@ -4,15 +4,13 @@ std::vector<DeepSort::ArmorBBox> DeepSort::Interface_::convert_armor_detections(
     const std::vector<Yolo_Type::Detection> &detections) {
     std::vector<ArmorBBox> result;
     for (const auto &det: detections) {
-        result.push_back({
+        result.emplace_back(
             static_cast<float>(det.box.x),
             static_cast<float>(det.box.y),
             static_cast<float>(det.box.x + det.box.width),
             static_cast<float>(det.box.y + det.box.height),
-            det.confidence,
-            -1,
             static_cast<TrackID>(-1)
-        });
+        );
     }
     return result;
 }
@@ -21,7 +19,7 @@ std::vector<DeepSort::BBox> DeepSort::Interface_::convert_bbox_detections(
     const std::vector<Yolo_Type::Detection> &detections) {
     std::vector<BBox> result;
     for (const auto &det: detections) {
-        result.push_back({
+        result.emplace_back(
             static_cast<float>(det.box.x),
             static_cast<float>(det.box.y),
             static_cast<float>(det.box.x + det.box.width),
@@ -29,7 +27,7 @@ std::vector<DeepSort::BBox> DeepSort::Interface_::convert_bbox_detections(
             det.confidence,
             -1,
             static_cast<TrackID>(-1)
-        });
+        );
     }
     return result;
 }
@@ -171,10 +169,7 @@ void DeepSort::ArmorMatch::Match(const std::vector<ArmorBBox> &armor_bboxes,
         int armor_number = armor_bboxes[a_idx].armor_number;
 
         // 创建新跟踪器
-        int track_id = data_manager_.create_tracker(
-            armor_bboxes[a_idx],
-            vehicle_bboxes[vehicle_idx],
-            armor_number);
+        int track_id = data_manager_.create_tracker(vehicle_bboxes[vehicle_idx]);
 
         armor_matched[a_idx] = true;
     }
@@ -209,25 +204,15 @@ void DeepSort::ArmorMatch::visualize_matching(const cv::Mat &frame, const std::v
             std::string num_str = std::to_string(a_bbox.armor_number);
             std::string type_str;
             switch (static_cast<TrackID>(a_bbox.armor_number)) {
-                case RED_1: type_str = "RED_Hero";
+                case HERO_1: type_str = "_Hero";
                     break;
-                case RED_2: type_str = "RED_Engineer";
+                case ENGINEERING_2: type_str = "_Engineer";
                     break;
-                case RED_3: type_str = "RED_Infantry3";
+                case INFANTRY_3: type_str = "_Infantry3";
                     break;
-                case RED_4: type_str = "RED_Infantry4";
+                case INFANTRY_4: type_str = "_Infantry4";
                     break;
-                case RED_SENTRY: type_str = "RED_Sentry";
-                    break;
-                case BLUE_1: type_str = "BLUE_Hero";
-                    break;
-                case BLUE_2: type_str = "BLUE_Engineer";
-                    break;
-                case BLUE_3: type_str = "BLUE_Infantry3";
-                    break;
-                case BLUE_4: type_str = "BLUE_Infantry4";
-                    break;
-                case BLUE_SENTRY: type_str = "BLUE_Sentry";
+                case SENTRY: type_str = "_Sentry";
                     break;
                 default: type_str = "UNKNOWN";
             }

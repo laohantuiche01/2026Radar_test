@@ -14,9 +14,9 @@ namespace DeepSort {
     // 数据管理单例类
     class DeepSortData {
     private:
-        std::map<int, std::shared_ptr<Tracker>> trackers_; // track_id -> Tracker
-        std::map<TrackID, int> vehicle_armor_map_;        // 车辆类型ID -> 装甲板数字
-        int next_self_id_ = 0; //本身固有的id
+        std::map<int, std::shared_ptr<Tracker>> trackers_; // track_id（唯一身份id，非车辆id） -> Tracker（对应到了跟踪器）
+        std::map<TrackID, int> vehicle_armor_map_;  // 车辆类型ID -> 装甲板数字 ====================================（带修改）
+        int next_self_id_ = 0; //本身固有的身份id
         std::mutex mutex_;
 
         DeepSortData() = default;
@@ -39,20 +39,8 @@ namespace DeepSort {
             std::lock_guard<std::mutex> lock(mutex_);
             int track_id = next_self_id_++; //这个id是查询用的id,不是车辆的id
             auto tracker = std::make_shared<Tracker>(track_id); //这里创建的跟踪器
-            tracker->init(armor_bbox, vehicle_bbox, armor_number);
+            tracker->init(vehicle_bbox);
             trackers_[track_id] = tracker;
-            vehicle_armor_map_[static_cast<TrackID>(armor_number)] = armor_number;
-            return track_id;
-        }
-
-        // 创建新跟踪器
-        int create_tracker(const ArmorBBox& armor_bbox, const BBox& vehicle_bbox, int armor_number) {
-            std::lock_guard<std::mutex> lock(mutex_);
-            int track_id = next_self_id_++; //这个id是查询用的id,不是车辆的id
-            auto tracker = std::make_shared<Tracker>(track_id); //这里创建的跟踪器
-            tracker->init(armor_bbox, vehicle_bbox, armor_number);
-            trackers_[track_id] = tracker;
-            vehicle_armor_map_[static_cast<TrackID>(armor_number)] = armor_number;
             return track_id;
         }
 

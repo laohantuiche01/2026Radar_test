@@ -66,6 +66,9 @@ public:
                         cv::rectangle(image, cv::Point(result.box.x, result.box.y),
                                       cv::Point(result.box.x + result.box.width, result.box.y + result.box.height),
                                       cv::Scalar(0, 0, 255));
+                        std::string text= std::to_string(result.id)+" ===";
+                        cv::putText(image,text, cv::Point(result.box.x, result.box.y),cv::FONT_HERSHEY_SIMPLEX,
+                            0.5, cv::Scalar(0, 255, 0), 1);
                     }
 
                     for (auto& vehicle : vehicle_detection)
